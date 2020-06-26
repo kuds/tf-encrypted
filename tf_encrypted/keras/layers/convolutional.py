@@ -770,7 +770,16 @@ class Conv2DTranspose(Conv2D):
         #     data_format=self.data_format,
         #     dilation_rate=self.dilation_rate)
 
-        tfe.pad
+
+        # TODO: Calculate new padding input
+        # TODO: Check whether padding is VALID or SAME are valid
+        # TODO: Check whether spacing is needed
+        # TODO: Check whether additional space is needed a = (i + 2p - k) mod s bottom and right edges
+        # TODO: Apply standard convolution operation
+
+
+
+
         tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
         outputs = tfe.conv2d()
