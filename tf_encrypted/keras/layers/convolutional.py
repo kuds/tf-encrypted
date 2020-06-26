@@ -759,14 +759,31 @@ class Conv2DTranspose(Conv2D):
             output_shape = (batch_size, out_height, out_width, self.filters)
 
         output_shape_tensor = array_ops.stack(output_shape)
-        outputs = backend.conv2d_transpose(
-            inputs,
-            self.kernel,
-            output_shape_tensor,
-            strides=self.strides,
-            padding=self.padding,
-            data_format=self.data_format,
-            dilation_rate=self.dilation_rate)
+
+
+        # outputs = backend.conv2d_transpose(
+        #     inputs,
+        #     self.kernel,
+        #     output_shape_tensor,
+        #     strides=self.strides,
+        #     padding=self.padding,
+        #     data_format=self.data_format,
+        #     dilation_rate=self.dilation_rate)
+
+        tfe.pad
+        tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
+
+        outputs = tfe.conv2d()
+
+        # return gen_nn_ops.conv2d_backprop_input(
+        #     input_sizes=output_shape,
+        #     filter=filters,
+        #     out_backprop=input,
+        #     strides=strides,
+        #     padding=padding,
+        #     data_format=data_format,
+        #     dilations=dilations,
+        #     name=name)
 
         if not context.executing_eagerly():
             # Infer the static output shape:
@@ -820,3 +837,137 @@ class Conv2DTranspose(Conv2D):
         config = super(Conv2DTranspose, self).get_config()
         config['output_padding'] = self.output_padding
         return config
+
+
+# @tf_export("nn.conv2d_transpose", v1=[])
+# def conv2d_transpose_v2(
+#     input,  # pylint: disable=redefined-builtin
+#     filters,  # pylint: disable=redefined-builtin
+#     output_shape,
+#     strides,
+#     padding="SAME",
+#     data_format="NHWC",
+#     dilations=None,
+#     name=None):
+#   """The transpose of `conv2d`.
+#   This operation is sometimes called "deconvolution" after
+#   (Zeiler et al., 2010), but is really the transpose (gradient) of
+#   `atrous_conv2d` rather than an actual deconvolution.
+#   Args:
+#     input: A 4-D `Tensor` of type `float` and shape `[batch, height, width,
+#       in_channels]` for `NHWC` data format or `[batch, in_channels, height,
+#       width]` for `NCHW` data format.
+#     filters: A 4-D `Tensor` with the same type as `input` and shape `[height,
+#       width, output_channels, in_channels]`.  `filter`'s `in_channels` dimension
+#       must match that of `input`.
+#     output_shape: A 1-D `Tensor` representing the output shape of the
+#       deconvolution op.
+#     strides: An int or list of `ints` that has length `1`, `2` or `4`.  The
+#       stride of the sliding window for each dimension of `input`. If a single
+#       value is given it is replicated in the `H` and `W` dimension. By default
+#       the `N` and `C` dimensions are set to 0. The dimension order is determined
+#       by the value of `data_format`, see below for details.
+#     padding: A string, either `'VALID'` or `'SAME'`. The padding algorithm. See
+#       the "returns" section of `tf.nn.convolution` for details.
+#     data_format: A string. 'NHWC' and 'NCHW' are supported.
+#     dilations: An int or list of `ints` that has length `1`, `2` or `4`,
+#       defaults to 1. The dilation factor for each dimension of`input`. If a
+#       single value is given it is replicated in the `H` and `W` dimension. By
+#       default the `N` and `C` dimensions are set to 1. If set to k > 1, there
+#       will be k-1 skipped cells between each filter element on that dimension.
+#       The dimension order is determined by the value of `data_format`, see above
+#       for details. Dilations in the batch and depth dimensions if a 4-d tensor
+#       must be 1.
+#     name: Optional name for the returned tensor.
+#   Returns:
+#     A `Tensor` with the same type as `input`.
+#   Raises:
+#     ValueError: If input/output depth does not match `filter`'s shape, or if
+#       padding is other than `'VALID'` or `'SAME'`.
+#   References:
+#     Deconvolutional Networks:
+#       [Zeiler et al., 2010]
+#       (https://ieeexplore.ieee.org/abstract/document/5539957)
+#       ([pdf]
+#       (http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.232.4023&rep=rep1&type=pdf))
+#   """
+#   with ops.name_scope(name, "conv2d_transpose",
+#                       [input, filter, output_shape]) as name:
+#     if data_format is None:
+#       data_format = "NHWC"
+#     channel_index = 1 if data_format.startswith("NC") else 3
+#
+#     strides = _get_sequence(strides, 2, channel_index, "strides")
+#     dilations = _get_sequence(dilations, 2, channel_index, "dilations")
+#
+#     return gen_nn_ops.conv2d_backprop_input(
+#         input_sizes=output_shape,
+#         filter=filters,
+#         out_backprop=input,
+#         strides=strides,
+#         padding=padding,
+#         data_format=data_format,
+#         dilations=dilations,
+#         name=name)
+
+# @tf_export(v1=["nn.conv2d_backprop_input"])
+# def conv2d_backprop_input(  # pylint: disable=redefined-builtin,dangerous-default-value
+#     input_sizes,
+#     filter=None,
+#     out_backprop=None,
+#     strides=None,
+#     padding=None,
+#     use_cudnn_on_gpu=True,
+#     data_format="NHWC",
+#     dilations=[1, 1, 1, 1],
+#     name=None,
+#     filters=None):
+#   r"""Computes the gradients of convolution with respect to the input.
+#   Args:
+#     input_sizes: A `Tensor` of type `int32`.
+#       An integer vector representing the shape of `input`,
+#       where `input` is a 4-D `[batch, height, width, channels]` tensor.
+#     filter: A `Tensor`. Must be one of the following types:
+#       `half`, `bfloat16`, `float32`, `float64`.
+#       4-D with shape
+#       `[filter_height, filter_width, in_channels, out_channels]`.
+#     out_backprop: A `Tensor`. Must have the same type as `filter`.
+#       4-D with shape `[batch, out_height, out_width, out_channels]`.
+#       Gradients w.r.t. the output of the convolution.
+#     strides: A list of `ints`.
+#       The stride of the sliding window for each dimension of the input
+#       of the convolution. Must be in the same order as the dimension specified
+#       with format.
+#     padding: Either the `string `"SAME"` or `"VALID"` indicating the type of
+#       padding algorithm to use, or a list indicating the explicit paddings at
+#       the start and end of each dimension. When explicit padding is used and
+#       data_format is `"NHWC"`, this should be in the form `[[0, 0], [pad_top,
+#       pad_bottom], [pad_left, pad_right], [0, 0]]`. When explicit padding used
+#       and data_format is `"NCHW"`, this should be in the form `[[0, 0], [0, 0],
+#       [pad_top, pad_bottom], [pad_left, pad_right]]`.
+#     use_cudnn_on_gpu: An optional `bool`. Defaults to `True`.
+#     data_format: An optional `string` from: `"NHWC", "NCHW"`.
+#       Defaults to `"NHWC"`.
+#       Specify the data format of the input and output data. With the
+#       default format "NHWC", the data is stored in the order of:
+#           [batch, in_height, in_width, in_channels].
+#       Alternatively, the format could be "NCHW", the data storage order of:
+#           [batch, in_channels, in_height, in_width].
+#     dilations: An optional list of `ints`. Defaults to `[1, 1, 1, 1]`.
+#       1-D tensor of length 4.  The dilation factor for each dimension of
+#       `input`. If set to k > 1, there will be k-1 skipped cells between each
+#       filter element on that dimension. The dimension order is determined by
+#       the value of `data_format`, see above for details. Dilations in the batch
+#       and depth dimensions must be 1.
+#     name: A name for the operation (optional).
+#     filters: Alias for filter.
+#   Returns:
+#     A `Tensor`. Has the same type as `filter`.
+#   """
+#   filter = deprecation.deprecated_argument_lookup(
+#       "filters", filters, "filter", filter)
+#   padding, explicit_paddings = _convert_padding(padding)
+#   return gen_nn_ops.conv2d_backprop_input(
+#       input_sizes, filter, out_backprop, strides, padding, use_cudnn_on_gpu,
+#       explicit_paddings, data_format, dilations, name)
+
