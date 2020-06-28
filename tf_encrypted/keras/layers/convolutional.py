@@ -761,38 +761,30 @@ class Conv2DTranspose(Conv2D):
         output_shape_tensor = array_ops.stack(output_shape)
 
 
-        # outputs = backend.conv2d_transpose(
-        #     inputs,
-        #     self.kernel,
-        #     output_shape_tensor,
-        #     strides=self.strides,
-        #     padding=self.padding,
-        #     data_format=self.data_format,
-        #     dilation_rate=self.dilation_rate)
 
+        # Paper: https://arxiv.org/pdf/1603.07285.pdf
 
         # TODO: Calculate new padding input
+
+        # stride = 1 and padding = 0
+        # k' = k, s'= s, p' = k - 1
+        # o' = i' + (k - 1)
+        if self.strides == (1, 1) and self.padding == "valid":
+            new_padding = self.kernel_size - 1
+            if new_padding > 0:
+                inputs = tfe.pad(inputs, [[new_padding, new_padding], [new_padding, new_padding]])
+
+        # stride = 1 and padding = 0
+        # k' = k, s'= s, p' = k - 1
+        # o' = i' + (k - 1)
+
+
         # TODO: Check whether padding is VALID or SAME are valid
         # TODO: Check whether spacing is needed
         # TODO: Check whether additional space is needed a = (i + 2p - k) mod s bottom and right edges
         # TODO: Apply standard convolution operation
 
-
-
-
-        tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
-
-        outputs = tfe.conv2d()
-
-        # return gen_nn_ops.conv2d_backprop_input(
-        #     input_sizes=output_shape,
-        #     filter=filters,
-        #     out_backprop=input,
-        #     strides=strides,
-        #     padding=padding,
-        #     data_format=data_format,
-        #     dilations=dilations,
-        #     name=name)
+        outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
         if not context.executing_eagerly():
             # Infer the static output shape:
