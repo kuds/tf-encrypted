@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.layers.activation import Activation
 from tf_encrypted.keras.layers.convolutional import Conv2D
+from tf_encrypted.keras.layers.convolutional import Conv2DTranspose
 from tf_encrypted.keras.layers.convolutional import DepthwiseConv2D
 from tf_encrypted.keras.layers.core import Reshape
 from tf_encrypted.keras.layers.dense import Dense
@@ -19,6 +20,7 @@ __all__ = [
     "Input",
     "Activation",
     "Conv2D",
+    "Conv2DTranspose",
     "Dense",
     "Flatten",
     "AveragePooling2D",
