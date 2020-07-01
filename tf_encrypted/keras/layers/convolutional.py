@@ -714,76 +714,36 @@ class Conv2DTranspose(Conv2D):
             raise NotImplementedError("Same padding is currently not supported for Conv2dTranpose")
 
     def build(self, input_shape):
-        input_shape = tensor_shape.TensorShape(input_shape)
-        if len(input_shape) != 4:
-            raise ValueError('Inputs should have rank 4. Received input shape: ' +
-                             str(input_shape))
-        channel_axis = self._get_channel_axis()
-        if input_shape.dims[channel_axis].value is None:
-            raise ValueError('The channel dimension of the inputs '
-                             'should be defined. Found `None`.')
+        if self.data_format == "channels_first":
+            channel_axis = 1
+        else:
+            channel_axis = -1
+        if input_shape[channel_axis] is None:
+            raise ValueError(
+                "The channel dimension of the inputs "
+                "should be defined. Found `None`."
+            )
         input_dim = int(input_shape[channel_axis])
-        self.input_spec = InputSpec(ndim=4, axes={channel_axis: input_dim})
-        kernel_shape = self.kernel_size + (self.filters, input_dim)
+        self.kernel_shape = self.kernel_size + (input_dim, self.filters)
 
-        self.kernel = self.add_weight(
-            name='kernel',
-            shape=kernel_shape,
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
-            trainable=True,
-            dtype=self.dtype)
+        kernel = self.kernel_initializer(self.kernel_shape)
+        self.kernel = self.add_weight(kernel)
+
         if self.use_bias:
-            self.bias = self.add_weight(
-                name='bias',
-                shape=(self.filters,),
-                initializer=self.bias_initializer,
-                regularizer=self.bias_regularizer,
-                constraint=self.bias_constraint,
-                trainable=True,
-                dtype=self.dtype)
+            # Expand bias shape dimensions. Bias needs to have
+            # a rank of 3 to be added to the output
+            bias_shape = [self.filters, 1, 1]
+            bias = self.bias_initializer(bias_shape)
+            self.bias = self.add_weight(bias)
         else:
             self.bias = None
+
         self.built = True
 
     def call(self, inputs):
-        inputs_shape = array_ops.shape(inputs)
-        batch_size = inputs_shape[0]
-        if self.data_format == 'channels_first':
-            h_axis, w_axis = 2, 3
-        else:
-            h_axis, w_axis = 1, 2
 
-        height, width = inputs_shape[h_axis], inputs_shape[w_axis]
-        kernel_h, kernel_w = self.kernel_size
-        stride_h, stride_w = self.strides
-
-        if self.output_padding is None:
-            out_pad_h = out_pad_w = None
-        else:
-            out_pad_h, out_pad_w = self.output_padding
-
-        # Infer the dynamic output shape:
-        out_height = conv_utils.deconv_output_length(height,
-                                                     kernel_h,
-                                                     padding=self.padding,
-                                                     output_padding=out_pad_h,
-                                                     stride=stride_h,
-                                                     dilation=self.dilation_rate[0])
-        out_width = conv_utils.deconv_output_length(width,
-                                                    kernel_w,
-                                                    padding=self.padding,
-                                                    output_padding=out_pad_w,
-                                                    stride=stride_w,
-                                                    dilation=self.dilation_rate[1])
-        if self.data_format == 'channels_first':
-            output_shape = (batch_size, self.filters, out_height, out_width)
-        else:
-            output_shape = (batch_size, out_height, out_width, self.filters)
-
-        output_shape_tensor = array_ops.stack(output_shape)
-
+        if self.data_format != "channels_first":
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
 
         #
@@ -793,8 +753,8 @@ class Conv2DTranspose(Conv2D):
         # stride = 1 and padding = 0
         # k' = k, s'= s, p' = k - 1
         # o' = i' + (k - 1)
-        if self.strides == (1, 1) and self.padding == "valid":
-            new_padding = self.kernel_size - 1
+        if self.strides == (1, 1) and self.padding == "VALID":
+            new_padding = self.kernel_size[0] - 1
             if new_padding > 0:
                 inputs = tfe.pad(inputs, [[new_padding, new_padding], [new_padding, new_padding]])
 
@@ -810,16 +770,8 @@ class Conv2DTranspose(Conv2D):
 
         outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
-        if not context.executing_eagerly():
-            # Infer the static output shape:
-            out_shape = self.compute_output_shape(inputs.shape)
-            outputs.set_shape(out_shape)
-
         if self.use_bias:
-            outputs = nn.bias_add(
-                outputs,
-                self.bias,
-                data_format=conv_utils.convert_data_format(self.data_format, ndim=4))
+            outputs = outputs + self.bias
 
         if self.activation is not None:
             return self.activation(outputs)

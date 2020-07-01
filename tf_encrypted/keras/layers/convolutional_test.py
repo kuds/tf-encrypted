@@ -140,7 +140,6 @@ class TestDepthwiseConv2d(unittest.TestCase):
         )
 
 
-
 class TestConv2dTranpose(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -172,7 +171,7 @@ class TestConv2dTranpose(unittest.TestCase):
 
         base_kwargs = {
             "filters": filters,
-            "strides": 2,
+            "strides": 1,
             "kernel_initializer": initializer,
         }
 
