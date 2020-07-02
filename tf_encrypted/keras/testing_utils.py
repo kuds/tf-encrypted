@@ -33,7 +33,7 @@ def agreement_test(
     tf_layer_cls = getattr(tf.keras.layers, tfe_layer_cls.__name__)
     tfe_kwargs = {**kwargs, **tfe_kwargs}
 
-    with tfe.protocol.SecureNN():
+    with tfe.protocol.Pond():
         tfe_layer = tfe_layer_cls(**tfe_kwargs)
         x = tfe.define_private_variable(input_data)
         y = tfe_layer(x)

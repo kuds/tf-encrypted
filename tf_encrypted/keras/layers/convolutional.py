@@ -745,7 +745,6 @@ class Conv2DTranspose(Conv2D):
         if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-
         #
 
         # TODO: Calculate new padding input
@@ -756,12 +755,11 @@ class Conv2DTranspose(Conv2D):
         if self.strides == (1, 1) and self.padding == "VALID":
             new_padding = self.kernel_size[0] - 1
             if new_padding > 0:
-                inputs = tfe.pad(inputs, [[new_padding, new_padding], [new_padding, new_padding]])
+                inputs = tfe.pad(inputs, [[0, 0],  [0, 0], [new_padding, new_padding], [new_padding, new_padding]])
 
         # stride = 1 and padding = 0
         # k' = k, s'= s, p' = k - 1
         # o' = i' + (k - 1)
-
 
         # TODO: Check whether padding is VALID or SAME are valid
         # TODO: Check whether spacing is needed
@@ -770,8 +768,13 @@ class Conv2DTranspose(Conv2D):
 
         outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
+
+
         if self.use_bias:
             outputs = outputs + self.bias
+
+        if self.data_format != "channels_first":
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
         if self.activation is not None:
             return self.activation(outputs)
