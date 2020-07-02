@@ -148,7 +148,7 @@ class TestConv2dTranpose(unittest.TestCase):
         self._core_conv2dtranpose(kernel_size=2, use_bias=True)
 
     def test_conv2dtranpose_nobias(self):
-        self._core_conv2dtranpose(kernel_size=3, use_bias=False)
+        self._core_conv2dtranpose(kernel_size=2, use_bias=False)
 
     def test_conv2dtranpose_same_padding(self):
         self._core_conv2dtranpose(kernel_size=2, padding="same")
@@ -157,9 +157,9 @@ class TestConv2dTranpose(unittest.TestCase):
         self._core_conv2dtranpose(kernel_size=(2, 2))
 
     def _core_conv2dtranpose(self, **layer_kwargs):
-        filters_in = 1
-        input_shape = [1, 3, 3, filters_in]  # channels last
-        filters = 1
+        filters_in = 3
+        input_shape = [2, 6, 6, filters_in]  # channels last
+        filters = 5
 
         if isinstance(layer_kwargs["kernel_size"], int):
             kernel_size_in = (layer_kwargs["kernel_size"],) * 2
